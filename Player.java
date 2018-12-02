@@ -92,7 +92,16 @@ class Player {
     public HashSet<Card> getGuardBoard(){
         return this.guardBoard;
     }
-    
+    //#endregion
+
+    //#region action
+    public void draw(){
+        this.handSizeHidden += nextCardDraw;
+        this.nextCardDraw = 1;
+    }
+    //#endregion
+
+    //#region value
     public double getValue(){
         //Si il est mort
         if (health <= 0){
@@ -142,13 +151,6 @@ class Player {
         str += "HAND VALUE : " + handValue;
 
         return str;
-    }
-    //#endregion
-
-    //#region action
-    public void draw(){
-        this.handSizeHidden += nextCardDraw;
-        this.nextCardDraw = 1;
     }
     //#endregion
 
