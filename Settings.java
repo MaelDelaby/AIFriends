@@ -46,7 +46,7 @@ abstract class Settings{
             0,
             2,3,1,4,3,2,1,3,2,5,
             4,4,2,4,1,4,1,1,1,4,
-            2,3,1,6,4,2,4,4,2,3,
+            2,3,1,6,4,2,4,3,2,3,
             5,2,2,3,5,2,1,2,2,4,
             3,5,3,2,3,4,3,1,1,2,
     
@@ -57,9 +57,9 @@ abstract class Settings{
             2,5,2,4,3,3,3,3,3,5,
     
             3,4,2,2,2,3,5,5,2,5,
-            2,3,4,2,4,2,4,1,2,4,
+            2,3,4,2,4,2,4,2,2,4,
             4,3,5,4,5,4,3,3,3,5,
-            5,5,4,5,4,3,3,5,3,6,
+            5,5,4,5,3,3,3,5,3,9,
             2,1,6,1,3,5,2,2,5,1,
     
             2,3,6,6,3,6,5,3,5,6,
@@ -72,6 +72,8 @@ abstract class Settings{
     //#region fight
     public static double VALUEOFPOSEDCARD;
     public static double[] HANDVALUE;
+    public static double RUNEVALUE;
+
     public static double ATTACKXDEFENSECOEF;
     public static double BREAKTHROUGHATTACKCOEF;
     public static double DRAINATTACKCOEF;
@@ -80,16 +82,18 @@ abstract class Settings{
     public static double WARDATTCKCOEF;
 
     private static void settingsFight1(){
-        VALUEOFPOSEDCARD = 1.5;
+        VALUEOFPOSEDCARD = 4;
 
-        HANDVALUE[0] = 3;
-        HANDVALUE[1] = 3;
-        HANDVALUE[2] = 3;
-        HANDVALUE[3] = 2;
-        HANDVALUE[4] = 1;
-        HANDVALUE[5] = 0;
-        HANDVALUE[6] = 0;
-        HANDVALUE[7] = 0;
+        HANDVALUE[0] = 7;
+        HANDVALUE[1] = 7;
+        HANDVALUE[2] = 7;
+        HANDVALUE[3] = 6;
+        HANDVALUE[4] = 5;
+        HANDVALUE[5] = 4;
+        HANDVALUE[6] = 4;
+        HANDVALUE[7] = 4;
+
+        RUNEVALUE = 3;
 
         ATTACKXDEFENSECOEF = 0.3;
         BREAKTHROUGHATTACKCOEF = 0.2;

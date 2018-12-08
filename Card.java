@@ -167,26 +167,16 @@ class Card implements Cloneable{
     }
 
     public double getDraftValue(){
-        return Settings.CARDSLADDER[this.number] + 0.3 * getAverageValue();
+        return Settings.CARDSLADDER[this.number] + 0.4 * getAverageValue();
     }
 
     private double getAverageValue(){
-        double tot = 0;
-        for (Card card : Player.myDeck){
-            tot += card.getCost();
-            tot += card.getCardDraw() * 1.5;
-        }
-
-        double averageBefore, averageAfter;
-        if (Player.myDeck.isEmpty()){
-            averageBefore = Settings.AVERAGE;
-        } else {
-            averageBefore = tot / Player.myDeck.size();
-        }
-
-        averageAfter = (tot + this.cost + this.getCardDraw() * 1.5) / (Player.myDeck.size() + 1);
-
-        return 1 - (Math.abs(Settings.AVERAGE - averageBefore) / Math.abs(Settings.AVERAGE - averageAfter));
+        return Math.abs(Settings.AVERAGE - 
+                            (
+                                (Player.getDeckAverage() + this.cost + this.cardDraw * 1.5)
+                                / 2
+                            )
+                        );
     }
     //#endregion
 

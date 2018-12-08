@@ -116,7 +116,7 @@ class Player {
         }
 
         for (int i = this.getHandSize() - 1; i > -1; --i){
-            value += Settings.HANDVALUE[i] + Settings.VALUEOFPOSEDCARD;
+            value += Settings.HANDVALUE[i];
         }
 
         return value;
@@ -145,7 +145,7 @@ class Player {
         double handValue = 0;
 
         for (int i = this.getHandSize() - 1; i > -1; --i){
-            handValue += Settings.HANDVALUE[i] + Settings.VALUEOFPOSEDCARD;
+            handValue += Settings.HANDVALUE[i];
         }
 
         str += "HAND VALUE : " + handValue;
