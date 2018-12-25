@@ -111,11 +111,16 @@ class Player {
         //Calcul enemyValue
         double value = this.getHealthValue();
         
-        for (Card card : this.board){
-            value += card.getValue();
-        }
+        value += this.board.stream()
+            .map(x -> x.getValue())
+            .reduce(Double::sum)
+            .orElse(0.0);
 
-        for (int i = this.getHandSize() - 1; i > -1; --i){
+        /*value += Arrays.asList(Settings.HANDVALUE).stream()
+            .limit(this.getHandSize())
+            .reduce(Double::sum)
+            .orElse(0.0);*/
+        for (int i = 0; i < this.getHandSize(); ++i){
             value += Settings.HANDVALUE[i];
         }
 
@@ -185,8 +190,8 @@ class Player {
 
     //Path for my turn
     public static HashSet<Path> paths;
-    //Path for min max enemy turn (just the trade phase)
-    public static HashSet<Path> enemyPaths;
+    
+    public static long beginTime;
 
     public static HashSet<Card> myDeck;
     public static HashSet<Card> enemyDeck;
@@ -233,23 +238,23 @@ class Player {
             
             
             System.err.println("ACTUAL AVERAGE : " + Player.getDeckAverage());
-            for (int i = 0; i < pickCards.size(); ++i){
-                System.err.println("Card "+ (i + 1) + " : id = " + pickCards.get(i).getCardNumber() + " rank = " + Settings.CARDSLADDER[pickCards.get(i).getCardNumber()] + " real value = " + pickCards.get(i).getDraftValue());
-            }
+            pickCards.stream().forEach(x -> System.err.println(
+                    "Id = " + x.getCardNumber() + 
+                    " rank = " + Settings.CARDSLADDER[x.getCardNumber()] + 
+                    " draft value = " + x.getDraftValue()));
+            
+            Card chosedCard = pickCards.stream().min(Comparator.comparingDouble(Card::getDraftValue)).get();
 
-            sortCardPickValue(pickCards);
-
-            Player.myDeck.add(pickCards.get(0));
-            System.out.println("PICK " + pickCards.get(0).getLocation());
+            Player.myDeck.add(chosedCard);
+            System.out.println("PICK " + chosedCard.getLocation());
         }
     }
 
     public static double getDeckAverage(){
-        double tot = 0;
-        for (Card card : Player.myDeck){
-            tot += card.getCost();
-            tot += card.getCardDraw() * 1.5;
-        }
+        double tot = Player.myDeck.stream()
+            .map(x -> x.getCost() + x.getCardDraw() * 1.5)
+            .reduce(Double::sum)
+            .orElse(0.0);
 
         double average;
         if (Player.myDeck.isEmpty()){
@@ -261,24 +266,17 @@ class Player {
         return average;
     }
 
-    private static void sortCardPickValue(ArrayList<Card> cards){
-        Collections.sort(cards, new Comparator<Card>() {
-            @Override
-            public int compare(Card card1, Card card2)
-            {
-                return card1.getDraftValue() < card2.getDraftValue() ? -1 : 1;
-            }
-        });
-    }
     //#endregion
 
     //#region fight
     private static void fightPhase(Scanner in){
 
         while (true) {
+            Player.beginTime = System.nanoTime();
+
             BoardGame boardGame = Player.getNewBoardGameInitialized(in);
             
-            System.out.println(boardGame.getBestPlay() + "PASS");
+            System.out.println(boardGame.getBestPlay() + "PASS "  + (System.nanoTime() - Player.beginTime));
         }
     }
 

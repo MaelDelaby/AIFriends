@@ -15,6 +15,10 @@ class BoardGame implements Cloneable{
     public Player getEnemy(){
         return this.enemy;
     }
+
+    public Player getPlayer(PlayerName playerName){
+        return playerName == PlayerName.me ? this.me : this.enemy;
+    }
     //#endregion
 
     public void addCard(Card card){
@@ -47,7 +51,7 @@ class BoardGame implements Cloneable{
     
  
     //#region differents AI game phase
-    private void allFace(){
+    private void allFace(HashSet<Path> pathSet){
         BoardGame boardGame = this.clone();
         String finalCommande = "";
         if (boardGame.enemy.getGuardBoard().isEmpty()){
@@ -57,11 +61,11 @@ class BoardGame implements Cloneable{
             }
         }
 
-        Player.paths.add(new Path(finalCommande, boardGame, new HashSet<Card>()));
+        pathSet.add(new Path(finalCommande, boardGame, new HashSet<Card>()));
     }
 
     //Summon charge creature
-    private void fillPathsPhase1(Path path){
+    private void fillPathsPhase1(HashSet<Path> pathSet, Path path){
         for (Card card : path.getBoardGame().me.getHandCharge()){
             //Si on pas assez de mana
             if (path.getBoardGame().me.getMana() - card.getCost() < 0){
@@ -70,32 +74,28 @@ class BoardGame implements Cloneable{
 
             Path nextPath = path.clone();
 
-            Card myCardCloned = null;
-
-            for (Card cardCloned : nextPath.getBoardGame().me.getHandCharge()){
-                if (card.equals(cardCloned)){
-                    myCardCloned = cardCloned;
-                    break;
-                }
-            }
+            Card myCardCloned = nextPath.getBoardGame().me.getHandCharge().stream()
+                .filter(x -> x.equals(card))
+                .findAny()
+                .get();
             
-            nextPath.addPath("SUMMON " + myCardCloned.getInstanceId() + ";");
+            nextPath.addInstruction("SUMMON " + myCardCloned.getInstanceId() + ";");
 
             nextPath.getBoardGame().summon(myCardCloned);
             nextPath.getCardsNeedAttack().add(myCardCloned);
             
-            fillPathsPhase1(nextPath);
+            fillPathsPhase1(pathSet, nextPath);
 
-            if (Player.paths.size() + 1 >= Settings.NBOFPATHMAX){
+            if (System.nanoTime() - Player.beginTime > Settings.MAXTIME){
                 return;
             }
         }
         
-        fillPathsPhase2(path);
+        fillPathsPhase2(pathSet, path);
     }
 
     //Put spell
-    private void fillPathsPhase2(Path path){
+    private void fillPathsPhase2(HashSet<Path> pathSet, Path path){
         for (Card spell : path.getBoardGame().me.getHandSpell()){
             if (path.getBoardGame().me.getMana() - spell.getCost() < 0){
                 continue;
@@ -111,82 +111,70 @@ class BoardGame implements Cloneable{
             for (Card creature : targetBoard){
                 Path nextPath = path.clone();
 
-                Card spellCloned = null;
-                Card creatureCloned = null;
+                Card spellCloned = nextPath.getBoardGame().me.getHand().stream()
+                    .filter(x -> x.equals(spell))
+                    .findAny()
+                    .get();
 
-                for (Card cardCloned : nextPath.getBoardGame().me.getHandSpell()){
-                    if (spell.equals(cardCloned)){
-                        spellCloned = cardCloned;
-                        break;
-                    }
-                }
+                HashSet<Card> targetBoardCloned = nextPath.getBoardGame()
+                    .getPlayer(spell.getType() == 1 ? PlayerName.me : PlayerName.enemy)
+                    .getBoard();
 
-                HashSet<Card> targetBoardCloned = null;
-                if (spell.getType() == 1){
-                    targetBoardCloned = nextPath.getBoardGame().me.getBoard();
-                } else {
-                    targetBoardCloned = nextPath.getBoardGame().enemy.getBoard();
-                }
-                for (Card cardCloned : targetBoardCloned){
-                    if (creature.equals(cardCloned)){
-                        creatureCloned = cardCloned;
-                        break;
-                    }
-                }
+                Card creatureCloned = targetBoardCloned.stream()
+                    .filter(x -> x.equals(creature))
+                    .findAny()
+                    .get();
 
-                nextPath.addPath("USE " + spellCloned.getInstanceId() + " " + creatureCloned.getInstanceId() + ";");
+                nextPath.addInstruction("USE " + spellCloned.getInstanceId() + " " + creatureCloned.getInstanceId() + ";");
 
                 nextPath.getBoardGame().spell(spellCloned, creatureCloned);
 
-                fillPathsPhase2(nextPath);
+                fillPathsPhase2(pathSet, nextPath);
 
-                if (Player.paths.size() + 1 >= Settings.NBOFPATHMAX){
+                if (System.nanoTime() - Player.beginTime > Settings.MAXTIME){
                     return;
                 }
             }
         }
 
-        fillPathsPhase3(path);
+        fillPathsPhase3(pathSet, path, PlayerName.me, PlayerName.enemy);
         
     }
 
     //Fight
-    private void fillPathsPhase3(Path path){
+    private void fillPathsPhase3(HashSet<Path> pathSet, Path path, PlayerName attackingPlayer, PlayerName defendingPlayer){
+        if (System.nanoTime() - Player.beginTime > Settings.MAXTIME){
+            return;
+        }
+
         //We create a new fight
-        for (Card myCard : path.getCardsNeedAttack()){
-            for (Card enemyCard : path.getBoardGame().enemy.getBoard()){
+        for (Card attackingCard : path.getCardsNeedAttack()){
+            for (Card defendingCard : path.getBoardGame().getPlayer(defendingPlayer).getBoard()){
                 //Si la carte adverse est bloquee par des provocations
-                if (!path.getBoardGame().enemy.getGuardBoard().isEmpty() && enemyCard.is(Abilitie.guard) == false){
+                if (!path.getBoardGame().getPlayer(defendingPlayer).getGuardBoard().isEmpty() && defendingCard.is(Abilitie.guard) == false){
                     continue;
                 }
 
                 Path nextPath = path.clone();
-
-                Card myCardCloned = null;
-                Card enemyCardCloned = null;
-
-                for (Card cardCloned : nextPath.getBoardGame().me.getBoard()){
-                    if (myCard.equals(cardCloned)){
-                        myCardCloned = cardCloned;
-                        break;
-                    }
-                }
-
-                for (Card cardCloned : nextPath.getBoardGame().enemy.getBoard()){
-                    if (enemyCard.equals(cardCloned)){
-                        enemyCardCloned = cardCloned;
-                        break;
-                    }
-                }
-
-                nextPath.addPath("ATTACK " + myCard.getInstanceId() + " " + enemyCard.getInstanceId() + ";");
-                nextPath.getCardsNeedAttack().remove(myCardCloned);
-
-                nextPath.getBoardGame().fight(myCardCloned, nextPath.getBoardGame().me, enemyCardCloned, nextPath.getBoardGame().enemy);
-
-                fillPathsPhase3(nextPath);
                 
-                if (Player.paths.size() + 1 >= Settings.NBOFPATHMAX){
+                Card attackingCardCloned = nextPath.getBoardGame().getPlayer(attackingPlayer).getBoard().stream()
+                    .filter(x -> x.equals(attackingCard))
+                    .findAny()
+                    .get();
+
+                Card defendingCardCloned = nextPath.getBoardGame().getPlayer(defendingPlayer).getBoard().stream()
+                    .filter(x -> x.equals(defendingCard))
+                    .findAny()
+                    .get();
+
+                nextPath.addInstruction("ATTACK " + attackingCard.getInstanceId() + " " + defendingCard.getInstanceId() + ";");
+                nextPath.getCardsNeedAttack().remove(attackingCard);
+
+                nextPath.getBoardGame().fight(attackingCardCloned, nextPath.getBoardGame().getPlayer(attackingPlayer), defendingCardCloned, nextPath.getBoardGame().getPlayer(defendingPlayer));
+
+                fillPathsPhase3(pathSet, nextPath, PlayerName.me, PlayerName.enemy);
+                
+                if (System.nanoTime() - Player.beginTime > Settings.MAXTIME){
                     return;
                 }
             }
@@ -196,22 +184,26 @@ class BoardGame implements Cloneable{
         if (path.getBoardGame().enemy.getGuardBoard().isEmpty()){
             for (Card card : path.getCardsNeedAttack()){
                 path.getBoardGame().enemy.addHealth(-card.getAttack());
-                path.addPath("ATTACK " + card.getInstanceId() + " -1;");
+                path.addInstruction("ATTACK " + card.getInstanceId() + " -1;");
             }
         }
 
-        fillPathsPhase4(path);
+        if (attackingPlayer == PlayerName.me){
+            fillPathsPhase4(pathSet, path);
+        } else {
+            pathSet.add(path);
+        }
     }
     
     //Summon creature
-    private void fillPathsPhase4(Path path){
+    private void fillPathsPhase4(HashSet<Path> pathSet, Path path){
         //If the board is full
         if (path.getBoardGame().me.getBoard().size() == Player.BOARDMAXSIZE){
             return;
         }
 
-        if (Player.paths.size() + 1 >= Settings.NBOFPATHMAX){
-            Player.paths.add(path);
+        if (System.nanoTime() - Player.beginTime > Settings.MAXTIME){
+            pathSet.add(path);
             return;
         }
 
@@ -225,136 +217,56 @@ class BoardGame implements Cloneable{
 
             path.getPhase4().add(card.getCardNumber());
 
-            Card myCardCloned = null;
+            Card myCardCloned = nextPath.getBoardGame().me.getHand().stream()
+                .filter(x -> x.equals(card))
+                .findAny()
+                .get();
 
-            for (Card cardCloned : nextPath.getBoardGame().me.getHand()){
-                if (card.equals(cardCloned)){
-                    myCardCloned = cardCloned;
-                    break;
-                }
-            }
-
-            nextPath.addPath("SUMMON " + myCardCloned.getInstanceId() + ";");
+            nextPath.addInstruction("SUMMON " + myCardCloned.getInstanceId() + ";");
 
             nextPath.getBoardGame().summon(myCardCloned);
             
-            fillPathsPhase4(nextPath);
+            fillPathsPhase4(pathSet, nextPath);
 
-            if (Player.paths.size() + 1 >= Settings.NBOFPATHMAX){
-                break;
+            if (System.nanoTime() - Player.beginTime > Settings.MAXTIME){
+                return;
             }
         }
         
-        Player.paths.add(path);
-    }
-
-    //Enemy Fight
-    private void fillPathsPhase5(Path path){
-        if (Player.enemyPaths.size() + 1 >= Settings.NBOFPATHMAXFORENEMY){
-            if (path.getBoardGame().me.getGuardBoard().isEmpty()){
-                for (Card card : path.getCardsNeedAttack()){
-                    path.getBoardGame().me.addHealth(-card.getAttack());
-                    path.addPath("ATTACK " + card.getInstanceId() + " -1;");
-                }
-            }
-
-            Player.enemyPaths.add(path);
-            return;
-        }
-
-        //We create a new fight
-        for (Card enemyCard : path.getCardsNeedAttack()){
-            for (Card myCard : path.getBoardGame().me.getBoard()){
-                //Si la carte adverse est bloquee par des provocations
-                if (!path.getBoardGame().me.getGuardBoard().isEmpty() && myCard.is(Abilitie.guard) == false){
-                    continue;
-                }
-
-                Path nextPath = path.clone();
-
-                Card enemyCardCloned = null;
-                Card myCardCloned = null;
-
-
-                for (Card cardCloned : nextPath.getBoardGame().enemy.getBoard()){
-                    if (enemyCard.equals(cardCloned)){
-                        enemyCardCloned = cardCloned;
-                        break;
-                    }
-                }
-                
-                for (Card cardCloned : nextPath.getBoardGame().me.getBoard()){
-                    if (myCard.equals(cardCloned)){
-                        myCardCloned = cardCloned;
-                        break;
-                    }
-                }
-
-                nextPath.addPath("ATTACK " + enemyCard.getInstanceId() + " " + myCard.getInstanceId() + ";");
-                nextPath.getCardsNeedAttack().remove(enemyCardCloned);
-
-                nextPath.getBoardGame().fight(enemyCardCloned, nextPath.getBoardGame().enemy, myCardCloned, nextPath.getBoardGame().me);
-
-                fillPathsPhase5(nextPath);
-
-                if (Player.enemyPaths.size() + 1 >= Settings.NBOFPATHMAXFORENEMY){
-                    break;
-                }
-            }
-            if (Player.enemyPaths.size() + 1 >= Settings.NBOFPATHMAXFORENEMY){
-                break;
-            }
-        }
-
-        //Si il n y a plus de taunt on envoie tout le reste des creature dans la tete de l'adversaire
-        if (path.getBoardGame().me.getGuardBoard().isEmpty()){
-            for (Card card : path.getCardsNeedAttack()){
-                path.getBoardGame().me.addHealth(-card.getAttack());
-                path.addPath("ATTACK " + card.getInstanceId() + " -1;");
-            }
-        }
-
-        Player.enemyPaths.add(path);
+        pathSet.add(path);
     }
     //#endregion
 
 
     public String getBestPlay(){
-        Player.paths = new HashSet<Path>();
-        this.allFace();
-        fillPathsPhase1(new Path("", this.clone(), (HashSet)this.me.getBoard().clone()));
+        HashSet<Path> pathSet = new HashSet<Path>();
+        this.allFace(pathSet);
+        fillPathsPhase1(pathSet, new Path("", this.clone(), (HashSet)this.me.getBoard().clone()));
 
-        System.err.println("Nombre paths : " + Player.paths.size());
-
-        if (Player.paths.size() >= Settings.NBOFPATHMAX){
-            System.err.println("Nombre de paths >= " + Settings.NBOFPATHMAX + " -> OVERTIME");
-        }
-
-        if (Player.paths.size() >= Settings.NBOFPATHMAXFORMINMAX){
-            System.err.println("Nombre de paths >= " + Settings.NBOFPATHMAXFORMINMAX + " -> Pas de min max");
-        }
+        pathSet.add(new Path("", this, null));
+        System.err.println("-- Board value before : " + this.getValue());
 
         String bestAttack = "";
-
         double bestBoardGameValue = -9999.0;
 
-        System.err.println("Board value before : " + this.getValue());
 
-        for (Path path : Player.paths){
-            System.err.print(path.getFinalCommande() + " : " + path.getBoardGame().getValue());
+        //Tente de faire un min max si on a encore du temps
+        if (System.nanoTime() - Player.beginTime < Settings.MAXTIME){
+            for (Path path : pathSet){
+                if (System.nanoTime() - Player.beginTime >= Settings.MAXTIME){
+                    break;
+                }
 
-            if (Player.paths.size() < Settings.NBOFPATHMAXFORMINMAX){
-                Player.enemyPaths = new HashSet<Path>();
+                System.err.print(path.getFinalCommande() + " : " + path.getBoardGame().getValue());
+    
                 path.getBoardGame().getEnemy().draw();
-                fillPathsPhase5(new Path("", path.getBoardGame(), (HashSet)path.getBoardGame().enemy.getBoard().clone()));
 
-                System.err.print(" Enemy nombre paths : " + Player.enemyPaths.size() + " ");
+                fillPathsPhase3(path.getEnemyPaths(), new Path("", path.getBoardGame(), (HashSet)path.getBoardGame().enemy.getBoard().clone()), PlayerName.enemy, PlayerName.me);
 
                 String enemyBestAttack = "";
-
                 double enemyLessBoardGameValue = 9999.0;
 
-                for (Path enemyPath : Player.enemyPaths){
+                for (Path enemyPath : path.getEnemyPaths()){
                     double enemyBoardGameValue = enemyPath.getBoardGame().getValue();
                     if (enemyBoardGameValue < enemyLessBoardGameValue){
                         enemyLessBoardGameValue = enemyBoardGameValue;
@@ -366,18 +278,20 @@ class BoardGame implements Cloneable{
                     bestBoardGameValue = enemyLessBoardGameValue;
                     bestAttack = path.getFinalCommande();
                 }
-
                 
                 System.err.println(" && " + enemyBestAttack + " : " + enemyLessBoardGameValue);
-            } else {
-                double boardGameValue = path.getBoardGame().getValue();
-                if (boardGameValue > bestBoardGameValue){
-                    bestBoardGameValue = boardGameValue;
-                    bestAttack = path.getFinalCommande();
-                }
-                System.err.println();
             }
         }
+
+        //Si c etait deja overtime ou que le min max fut trop long
+        if (System.nanoTime() - Player.beginTime >= Settings.MAXTIME){
+            pathSet.stream().forEach(System.err::println);
+            return pathSet.stream()
+                .max(Comparator.comparingDouble(Path::getBoardGameValue))//A modifier
+                .get()
+                .getFinalCommande();
+        }
+
 
         return bestAttack;
     }

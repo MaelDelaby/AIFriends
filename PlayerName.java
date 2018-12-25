@@ -1,0 +1,3 @@
+enum PlayerName{ 
+    me,enemy
+} 

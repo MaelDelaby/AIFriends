@@ -3,6 +3,7 @@ class Path implements Cloneable{
     private BoardGame boardGame;
     private HashSet<Card> cardsNeedAttack;
     private HashSet<Integer> phase4;
+    private HashSet<Path> enemyPaths;
 
     //#region constructor
     public Path(String finalCommande, BoardGame boardGame, HashSet<Card> cardsNeedAttack){
@@ -14,12 +15,17 @@ class Path implements Cloneable{
         this.boardGame = boardGame;
         this.cardsNeedAttack = cardsNeedAttack;
         this.phase4 = phase4;
+        this.enemyPaths = new HashSet<Path>();
     }
     //#endregion
 
     //#region accessor & mutator
-    public void addPath(String path){
+    public void addInstruction(String path){
         this.finalCommande += path;
+    }
+
+    public void addEnemyPath(Path enemyPath){
+        this.enemyPaths.add(enemyPath);
     }
 
     public String getFinalCommande(){
@@ -30,6 +36,10 @@ class Path implements Cloneable{
         return this.boardGame;
     }
 
+    public Double getBoardGameValue(){
+        return this.boardGame.getValue();
+    }
+
     public HashSet<Card> getCardsNeedAttack(){
         return this.cardsNeedAttack;
     }
@@ -37,7 +47,16 @@ class Path implements Cloneable{
     public HashSet<Integer> getPhase4(){
         return this.phase4;
     }
+
+    public HashSet<Path> getEnemyPaths(){
+        return this.enemyPaths;
+    }
     //#endregion
+
+    @Override
+    public String toString(){
+        return this.finalCommande + " : " + this.boardGame.getValue();
+    }
 
     @Override
     public Path clone(){

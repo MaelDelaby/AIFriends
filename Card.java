@@ -21,17 +21,16 @@ class Card implements Cloneable{
             int cost,
             int attack,
             int defense,
-            String abilities,
+            String s_abilities,
             int myHealthChange, 
             int enemyHealthChange,
             int cardDraw){
         this(number, instanceId, location, type, cost, attack, defense, new HashSet<Abilitie>(), myHealthChange, enemyHealthChange, cardDraw);
 
-        for (Abilitie abilitie : Abilitie.values()){
-            if (abilities.contains(abilitie.getCara()) == true){
-                this.abilities.add(abilitie);
-            }
-        }
+        Arrays.asList(Abilitie.values())
+            .stream()
+            .filter(x -> s_abilities.contains(x.getCara()))
+            .forEach(x -> this.abilities.add(x));
     }
 
     public Card(int number,

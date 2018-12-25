@@ -26,14 +26,10 @@ abstract class Settings{
     }
 
     //#region timer
-    public static int NBOFPATHMAX;
-    public static int NBOFPATHMAXFORMINMAX;
-    public static int NBOFPATHMAXFORENEMY;
+    public static int MAXTIME;
 
     private static void settingsTimer1(){
-        NBOFPATHMAX = 600;
-        NBOFPATHMAXFORMINMAX = 100;
-        NBOFPATHMAXFORENEMY = 20;
+        MAXTIME = 1000000000;
     }
     //#endregion
 
